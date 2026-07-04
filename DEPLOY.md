@@ -4,6 +4,47 @@
 всего собрать образы прямо на сервере. Ниже — рекомендуемый способ и альтернатива
 без пересборки.
 
+## Способ 0 (авто-CI/CD): образы из ghcr.io
+
+Самый удобный вариант: GitHub Actions (`.github/workflows/docker-publish.yml`)
+при каждом пуше в `main` собирает образы backend и frontend и публикует их в
+GitHub Container Registry. Сервер их только **подтягивает** — ничего не собирает.
+
+### Разовая настройка
+
+1. Запушить проект в репозиторий и дождаться, пока экшен `Build and publish
+   Docker images` отработает (вкладка **Actions**).
+2. Сделать пакеты публичными (иначе сервер не скачает без логина):
+   GitHub → профиль → **Packages** → `project_chipsiki-backend` и
+   `project_chipsiki-frontend` → *Package settings* → **Change visibility → Public**.
+   Либо оставить приватными и на сервере один раз выполнить:
+   ```bash
+   echo <PERSONAL_ACCESS_TOKEN> | docker login ghcr.io -u AlexeyKonoplia --password-stdin
+   ```
+   (токен с правом `read:packages`).
+
+### На сервере
+
+```bash
+git clone https://github.com/AlexeyKonoplia/project_chipsiki.git chipsiki
+cd chipsiki
+cp .env.example .env      # заполнить SECRET_KEY, пароль БД, FRONTEND_PORT=80
+docker compose -f docker-compose.prod.yml up -d    # подтянет образы из ghcr.io
+```
+
+Обновление после нового пуша в `main`:
+
+```bash
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+```
+
+`docker-compose.prod.yml` уже указывает на
+`ghcr.io/alexeykonoplia/project_chipsiki-backend:latest` и `...-frontend:latest`
+(с `pull_policy: always`), db остаётся официальным `postgres:16-alpine`.
+
+---
+
 ## Способ 1 (рекомендуется): собрать на сервере
 
 ### 1. Установить Docker на сервере (Ubuntu/Debian)
