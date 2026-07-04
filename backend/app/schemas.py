@@ -24,6 +24,13 @@ class AdminUpdate(BaseModel):
     is_admin: bool
 
 
+class UserPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    username: str
+    is_admin: bool
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -86,6 +93,11 @@ class ReviewCreate(BaseModel):
     new_product_description: str | None = None
     new_product_image_url: str | None = None
     new_product_category_ids: list[int] = []
+
+
+class ReviewUpdate(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    text: str | None = None
 
 
 class ReviewOut(BaseModel):

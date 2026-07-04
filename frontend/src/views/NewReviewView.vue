@@ -12,7 +12,7 @@ const route = useRoute()
 
 const mode = ref('existing') // 'existing' | 'new'
 const selectedProductId = ref(null)
-const preselected = ref('')
+const autocomplete = ref(null)
 
 // New-product fields
 const name = ref('')
@@ -38,8 +38,7 @@ onMounted(async () => {
   if (route.query.product_id) {
     try {
       const { data } = await api.get(`/api/products/${route.query.product_id}`)
-      selectedProductId.value = data.id
-      preselected.value = data.name
+      autocomplete.value?.setSelected(data)
     } catch {
       /* ignore */
     }
@@ -110,10 +109,7 @@ async function submit() {
       </div>
 
       <div v-if="mode === 'existing'">
-        <p v-if="preselected" class="muted" style="margin: 0 0 8px">
-          Выбрано: <strong style="color: var(--text)">{{ preselected }}</strong>
-        </p>
-        <ProductAutocomplete v-model="selectedProductId" @select="preselected = $event.name" />
+        <ProductAutocomplete ref="autocomplete" v-model="selectedProductId" />
       </div>
 
       <div v-else class="card" style="background: var(--card-2)">

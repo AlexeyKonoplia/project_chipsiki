@@ -121,6 +121,41 @@ def create_product(
     return serialize_product(db, product)
 
 
+@router.patch("/{product_id}", response_model=ProductOut)
+def update_product(
+    product_id: int,
+    name: str = Form(...),
+    description: str | None = Form(None),
+    category_ids: list[int] = Form(default=[]),
+    image: UploadFile | None = File(None),
+    remove_image: bool = Form(False),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    product = db.get(Product, product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    if not current_user.is_admin and product.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Недостаточно прав для изменения товара")
+
+    name = name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Название товара обязательно")
+
+    product.name = name
+    product.description = description.strip() if description and description.strip() else None
+    product.categories = _resolve_categories(db, category_ids)
+
+    if image is not None:
+        product.image_url = _save_image(image)
+    elif remove_image:
+        product.image_url = None
+
+    db.commit()
+    db.refresh(product)
+    return serialize_product(db, product)
+
+
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_product(
     product_id: int,

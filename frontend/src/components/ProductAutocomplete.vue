@@ -2,7 +2,7 @@
 import { ref, onBeforeUnmount } from 'vue'
 import api from '../api'
 
-// v-model holds the selected product id (or null while typing / unmatched).
+// v-model holds the selected product id (or null when nothing is chosen).
 const props = defineProps({
   modelValue: { type: [Number, String, null], default: null },
 })
@@ -12,13 +12,10 @@ const query = ref('')
 const results = ref([])
 const open = ref(false)
 const loading = ref(false)
+const selected = ref(null) // the chosen product object (shown as a pill)
 let timer = null
-let blurTimer = null
 
-// Uses @input (not a watch on `query`) so that programmatically setting the
-// field in choose() does NOT re-trigger the search / clear the selection.
 function onInput() {
-  emit('update:modelValue', null)
   clearTimeout(timer)
   if (!query.value.trim()) {
     results.value = []
@@ -40,68 +37,122 @@ async function search() {
 }
 
 function choose(p) {
-  query.value = p.name
+  // Explicit selection: show the pill and set the id unambiguously.
+  selected.value = p
+  query.value = ''
   results.value = []
   open.value = false
   emit('update:modelValue', p.id)
   emit('select', p)
 }
 
+function clearSelection() {
+  selected.value = null
+  emit('update:modelValue', null)
+}
+
 function onFocus() {
   if (results.value.length) open.value = true
 }
-
 function onBlur() {
-  // Delay so a click on a suggestion registers first.
-  blurTimer = setTimeout(() => (open.value = false), 150)
+  setTimeout(() => (open.value = false), 150)
 }
 
-onBeforeUnmount(() => {
-  clearTimeout(timer)
-  clearTimeout(blurTimer)
-})
+// Lets the parent preselect a product (e.g. from ?product_id=).
+function setSelected(product) {
+  selected.value = product
+  emit('update:modelValue', product.id)
+}
+defineExpose({ setSelected })
+
+onBeforeUnmount(() => clearTimeout(timer))
 </script>
 
 <template>
   <div class="ac">
-    <input
-      v-model="query"
-      placeholder="Начните вводить название товара…"
-      autocomplete="off"
-      @input="onInput"
-      @focus="onFocus"
-      @blur="onBlur"
-    />
-    <div v-if="open" class="ac-list">
-      <div v-if="loading" class="ac-empty muted">Поиск…</div>
-      <div v-else-if="results.length === 0" class="ac-empty muted">
-        Ничего не найдено — переключитесь на «Добавить новый».
-      </div>
-      <button
-        v-for="p in results"
-        :key="p.id"
-        type="button"
-        class="ac-item"
-        @mousedown.prevent="choose(p)"
-      >
-        <span class="ac-thumb">
-          <img v-if="p.image_url" :src="p.image_url" :alt="p.name" />
-          <span v-else>📦</span>
+    <!-- Selected state: a clear pill with a reset button -->
+    <div v-if="selected" class="ac-selected">
+      <span class="ac-thumb">
+        <img v-if="selected.image_url" :src="selected.image_url" :alt="selected.name" />
+        <span v-else>📦</span>
+      </span>
+      <span class="ac-body">
+        <span class="ac-name">{{ selected.name }}</span>
+        <span class="muted" style="font-size: 12px">
+          ★ {{ selected.average_rating ? selected.average_rating.toFixed(1) : '—' }}
+          · {{ selected.review_count }} отз.
         </span>
-        <span class="ac-body">
-          <span class="ac-name">{{ p.name }}</span>
-          <span class="muted" style="font-size: 12px">
-            ★ {{ p.average_rating ? p.average_rating.toFixed(1) : '—' }} · {{ p.review_count }} отз.
-          </span>
-        </span>
+      </span>
+      <button type="button" class="ac-clear" title="Выбрать другой" @click="clearSelection">
+        ✕
       </button>
     </div>
+
+    <!-- Search state -->
+    <template v-else>
+      <input
+        v-model="query"
+        placeholder="Начните вводить название товара…"
+        autocomplete="off"
+        @input="onInput"
+        @focus="onFocus"
+        @blur="onBlur"
+      />
+      <div v-if="open" class="ac-list">
+        <div v-if="loading" class="ac-empty muted">Поиск…</div>
+        <div v-else-if="results.length === 0" class="ac-empty muted">
+          Ничего не найдено — переключитесь на «Добавить новый».
+        </div>
+        <button
+          v-for="p in results"
+          :key="p.id"
+          type="button"
+          class="ac-item"
+          @mousedown.prevent="choose(p)"
+        >
+          <span class="ac-thumb">
+            <img v-if="p.image_url" :src="p.image_url" :alt="p.name" />
+            <span v-else>📦</span>
+          </span>
+          <span class="ac-body">
+            <span class="ac-name">{{ p.name }}</span>
+            <span class="muted" style="font-size: 12px">
+              ★ {{ p.average_rating ? p.average_rating.toFixed(1) : '—' }} · {{ p.review_count }} отз.
+            </span>
+          </span>
+        </button>
+      </div>
+    </template>
   </div>
 </template>
 
 <style scoped>
 .ac {
   position: relative;
+}
+.ac-selected {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  background: rgba(124, 92, 255, 0.1);
+}
+.ac-clear {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.ac-clear:hover {
+  color: var(--danger);
+  border-color: var(--danger);
 }
 .ac-list {
   position: absolute;

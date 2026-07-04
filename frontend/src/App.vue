@@ -23,6 +23,7 @@ function logout() {
       <router-link to="/new-review">Оставить отзыв</router-link>
       <router-link v-if="auth.user?.is_admin" to="/admin">Админка</router-link>
       <template v-if="auth.isAuthenticated">
+        <router-link :to="{ name: 'user', params: { id: auth.user.id } }">Мои отзывы</router-link>
         <span class="navuser">👤 {{ auth.user?.username }}</span>
         <a href="#" @click.prevent="logout">Выйти</a>
       </template>

@@ -6,17 +6,21 @@ import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import ProductDetailView from '../views/ProductDetailView.vue'
 import NewProductView from '../views/NewProductView.vue'
+import EditProductView from '../views/EditProductView.vue'
 import NewReviewView from '../views/NewReviewView.vue'
 import AdminView from '../views/AdminView.vue'
+import UserReviewsView from '../views/UserReviewsView.vue'
 
 const routes = [
   { path: '/', name: 'home', component: HomeView },
   { path: '/login', name: 'login', component: LoginView },
   { path: '/register', name: 'register', component: RegisterView },
   { path: '/products/:id', name: 'product', component: ProductDetailView, props: true },
+  { path: '/products/:id/edit', name: 'edit-product', component: EditProductView, props: true, meta: { auth: true } },
   { path: '/new-product', name: 'new-product', component: NewProductView, meta: { auth: true } },
   { path: '/new-review', name: 'new-review', component: NewReviewView, meta: { auth: true } },
   { path: '/admin', name: 'admin', component: AdminView, meta: { auth: true, admin: true } },
+  { path: '/users/:id', name: 'user', component: UserReviewsView, props: true },
 ]
 
 const router = createRouter({

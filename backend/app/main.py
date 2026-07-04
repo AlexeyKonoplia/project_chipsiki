@@ -9,7 +9,7 @@ from sqlalchemy.exc import OperationalError
 
 from .config import settings
 from .database import Base, engine
-from .routers import admin, auth, categories, products, reviews
+from .routers import admin, auth, categories, products, reviews, users
 
 
 def _wait_for_db(retries: int = 30, delay: float = 2.0) -> None:
@@ -75,6 +75,7 @@ app.include_router(categories.router)
 app.include_router(products.router)
 app.include_router(reviews.router)
 app.include_router(admin.router)
+app.include_router(users.router)
 
 # Serve uploaded images.
 app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")

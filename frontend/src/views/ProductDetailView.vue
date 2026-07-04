@@ -15,15 +15,35 @@ const loading = ref(true)
 const notFound = ref(false)
 const deleting = ref(false)
 
-const canDelete = computed(
+// Inline review editing state
+const editingId = ref(null)
+const editRating = ref(0)
+const editText = ref('')
+const savingReview = ref(false)
+
+const canManageProduct = computed(
   () =>
     product.value &&
     auth.user &&
     (auth.user.is_admin || auth.user.id === product.value.owner.id)
 )
 
+function canManageReview(r) {
+  return auth.user && (auth.user.is_admin || auth.user.id === r.author.id)
+}
+
 function formatDate(s) {
   return new Date(s).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' })
+}
+
+async function loadProduct() {
+  const { data } = await api.get(`/api/products/${props.id}`)
+  product.value = data
+}
+
+async function loadReviews() {
+  const res = await api.get('/api/reviews', { params: { product_id: props.id } })
+  reviews.value = res.data
 }
 
 async function removeProduct() {
@@ -39,12 +59,43 @@ async function removeProduct() {
   }
 }
 
+function startEdit(r) {
+  editingId.value = r.id
+  editRating.value = r.rating
+  editText.value = r.text || ''
+}
+function cancelEdit() {
+  editingId.value = null
+}
+async function saveEdit(r) {
+  if (editRating.value < 1) return
+  savingReview.value = true
+  try {
+    await api.patch(`/api/reviews/${r.id}`, {
+      rating: editRating.value,
+      text: editText.value.trim() || null,
+    })
+    editingId.value = null
+    await Promise.all([loadReviews(), loadProduct()])
+  } catch (e) {
+    alert(e.response?.data?.detail || 'Не удалось изменить отзыв')
+  } finally {
+    savingReview.value = false
+  }
+}
+async function removeReview(r) {
+  if (!confirm('Удалить этот отзыв?')) return
+  try {
+    await api.delete(`/api/reviews/${r.id}`)
+    await Promise.all([loadReviews(), loadProduct()])
+  } catch (e) {
+    alert(e.response?.data?.detail || 'Не удалось удалить отзыв')
+  }
+}
+
 onMounted(async () => {
   try {
-    const { data } = await api.get(`/api/products/${props.id}`)
-    product.value = data
-    const res = await api.get('/api/reviews', { params: { product_id: props.id } })
-    reviews.value = res.data
+    await Promise.all([loadProduct(), loadReviews()])
   } catch (e) {
     if (e.response?.status === 404) notFound.value = true
   } finally {
@@ -78,14 +129,27 @@ onMounted(async () => {
           <div style="margin-bottom: 10px">
             <span v-for="c in product.categories" :key="c.id" class="badge">{{ c.name }}</span>
           </div>
-          <p v-if="product.description">{{ product.description }}</p>
-          <p class="muted">Добавил: {{ product.owner.username }} · {{ formatDate(product.created_at) }}</p>
-          <div class="row" style="gap: 10px">
+          <p v-if="product.description" style="white-space: pre-wrap">{{ product.description }}</p>
+          <p class="muted">
+            Добавил:
+            <router-link :to="{ name: 'user', params: { id: product.owner.id } }">
+              {{ product.owner.username }}
+            </router-link>
+            · {{ formatDate(product.created_at) }}
+          </p>
+          <div class="row" style="gap: 10px; flex-wrap: wrap">
             <router-link class="btn" :to="{ name: 'new-review', query: { product_id: product.id } }">
               Оставить отзыв
             </router-link>
-            <button v-if="canDelete" class="btn danger" :disabled="deleting" @click="removeProduct">
-              {{ deleting ? 'Удаление…' : '🗑 Удалить товар' }}
+            <router-link
+              v-if="canManageProduct"
+              class="btn secondary"
+              :to="{ name: 'edit-product', params: { id: product.id } }"
+            >
+              ✏️ Редактировать
+            </router-link>
+            <button v-if="canManageProduct" class="btn danger" :disabled="deleting" @click="removeProduct">
+              {{ deleting ? 'Удаление…' : '🗑 Удалить' }}
             </button>
           </div>
         </div>
@@ -96,14 +160,42 @@ onMounted(async () => {
     <p v-if="reviews.length === 0" class="muted">Пока нет отзывов. Будьте первым!</p>
     <div v-else style="display: flex; flex-direction: column; gap: 12px">
       <div v-for="r in reviews" :key="r.id" class="card">
-        <div class="row" style="justify-content: space-between">
+        <div class="row" style="justify-content: space-between; align-items: flex-start">
           <div class="row">
-            <strong>{{ r.author.username }}</strong>
-            <StarRating :model-value="r.rating" />
+            <router-link :to="{ name: 'user', params: { id: r.author.id } }" style="color: inherit">
+              <strong>{{ r.author.username }}</strong>
+            </router-link>
+            <StarRating v-if="editingId !== r.id" :model-value="r.rating" />
           </div>
           <span class="muted">{{ formatDate(r.created_at) }}</span>
         </div>
-        <p v-if="r.text" style="margin: 8px 0 0">{{ r.text }}</p>
+
+        <!-- Read mode -->
+        <template v-if="editingId !== r.id">
+          <p v-if="r.text" style="margin: 8px 0 0; white-space: pre-wrap">{{ r.text }}</p>
+          <div v-if="canManageReview(r)" class="row" style="gap: 8px; margin-top: 10px">
+            <button class="btn secondary" style="padding: 5px 12px" @click="startEdit(r)">
+              ✏️ Изменить
+            </button>
+            <button class="btn danger" style="padding: 5px 12px" @click="removeReview(r)">
+              🗑 Удалить
+            </button>
+          </div>
+        </template>
+
+        <!-- Edit mode -->
+        <template v-else>
+          <div style="margin: 10px 0">
+            <StarRating v-model="editRating" editable style="font-size: 26px" />
+          </div>
+          <textarea v-model="editText" rows="3" placeholder="Текст отзыва…"></textarea>
+          <div class="row" style="gap: 8px; margin-top: 10px">
+            <button class="btn" :disabled="savingReview || editRating < 1" @click="saveEdit(r)">
+              {{ savingReview ? 'Сохранение…' : 'Сохранить' }}
+            </button>
+            <button class="btn secondary" @click="cancelEdit">Отмена</button>
+          </div>
+        </template>
       </div>
     </div>
   </template>

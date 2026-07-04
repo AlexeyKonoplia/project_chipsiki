@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session, joinedload
 
 from ..database import get_db
 from ..deps import get_current_user
 from ..models import Product, Review, User
-from ..schemas import ReviewCreate, ReviewOut, ReviewWithProduct
+from ..schemas import ReviewCreate, ReviewOut, ReviewUpdate, ReviewWithProduct
 from .products import serialize_product, _resolve_categories
 
 router = APIRouter(prefix="/api/reviews", tags=["reviews"])
@@ -89,3 +89,39 @@ def create_review(
     db.commit()
     db.refresh(review)
     return review
+
+
+def _get_owned_review(db: Session, review_id: int, user: User) -> Review:
+    review = db.get(Review, review_id)
+    if not review:
+        raise HTTPException(status_code=404, detail="Отзыв не найден")
+    if not user.is_admin and review.author_id != user.id:
+        raise HTTPException(status_code=403, detail="Недостаточно прав для изменения отзыва")
+    return review
+
+
+@router.patch("/{review_id}", response_model=ReviewOut)
+def update_review(
+    review_id: int,
+    payload: ReviewUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    review = _get_owned_review(db, review_id, current_user)
+    review.rating = payload.rating
+    review.text = payload.text.strip() if payload.text and payload.text.strip() else None
+    db.commit()
+    db.refresh(review)
+    return review
+
+
+@router.delete("/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_review(
+    review_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    review = _get_owned_review(db, review_id, current_user)
+    db.delete(review)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
