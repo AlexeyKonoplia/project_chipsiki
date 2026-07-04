@@ -38,9 +38,10 @@ services:
       ADMIN_USERNAMES: ${ADMIN_USERNAMES:-koh0}
     volumes:
       - uploads_data:/app/uploads
-    # Только localhost: наружу не торчит, фронт ходит по внутренней сети.
-    ports:
-      - "127.0.0.1:8000:8000"
+    # Порт НЕ публикуется на хост: фронт-nginx ходит к бэкенду по внутренней
+    # сети как http://backend:8000. Так нет конфликта с занятым портом 8000.
+    expose:
+      - "8000"
 
   frontend:
     build: ./frontend
