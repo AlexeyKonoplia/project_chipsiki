@@ -1,16 +1,41 @@
 import os
+import time
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 
 from .config import settings
 from .database import Base, engine
 from .routers import admin, auth, categories, products, reviews
 
 
+def _wait_for_db(retries: int = 30, delay: float = 2.0) -> None:
+    # The DB (or its DNS name) may not be ready the instant the backend starts,
+    # especially under Portainer where depends_on ordering isn't guaranteed.
+    # Retry instead of crashing the container.
+    last_err: Exception | None = None
+    for attempt in range(1, retries + 1):
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            return
+        except OperationalError as exc:
+            last_err = exc
+            print(
+                f"[startup] database not ready (attempt {attempt}/{retries}), "
+                f"retrying in {delay}s...",
+                flush=True,
+            )
+            time.sleep(delay)
+    raise RuntimeError("Database is not reachable after waiting") from last_err
+
+
 def _bootstrap_db() -> None:
+    _wait_for_db()
+
     # Create tables on startup (simple approach; real projects use Alembic).
     Base.metadata.create_all(bind=engine)
 
