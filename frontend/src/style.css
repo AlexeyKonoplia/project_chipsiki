@@ -1,0 +1,329 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  /* «Мокрый асфальт» + яркие акценты */
+  --bg: #0f1117;
+  --bg-2: #12151d;
+  --card: #181b23;
+  --card-2: #1f232d;
+  --border: #2a2f3a;
+  --text: #eceef2;
+  --muted: #8b93a3;
+
+  --primary: #7c5cff;
+  --primary-dark: #6a48f0;
+  --accent: #00e5c0;
+  --accent-2: #ff5d8f;
+  --danger: #ff5c74;
+  --star: #ffd23f;
+
+  --radius: 14px;
+  --glow: 0 8px 30px rgba(124, 92, 255, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(900px 500px at 12% -8%, rgba(124, 92, 255, 0.16), transparent 60%),
+    radial-gradient(800px 500px at 100% 0%, rgba(0, 229, 192, 0.1), transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+h1,
+h2,
+h3,
+.brand,
+.title {
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  color: #4dead0;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 28px 16px 80px;
+}
+
+/* ---------- Navbar ---------- */
+.navbar {
+  background: rgba(15, 17, 23, 0.72);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+.navbar-inner {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 16px;
+}
+.navbar .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 0.5px;
+}
+.navbar .brand span {
+  background: linear-gradient(90deg, #fff, #b9a9ff 60%, var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.navbar .brand-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: cover;
+  display: block;
+}
+.navbar .brand:hover {
+  opacity: 0.9;
+}
+.navbar .spacer {
+  flex: 1;
+}
+.navbar a,
+.navbar .navuser {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+.navbar a:hover {
+  color: var(--text);
+}
+.navbar .router-link-active {
+  color: var(--text);
+}
+
+/* ---------- Cards ---------- */
+.card {
+  background: linear-gradient(180deg, var(--card), var(--bg-2));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 18px;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  background: linear-gradient(135deg, var(--primary), #9d7bff);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.15s, background 0.15s;
+}
+.btn:hover {
+  color: #fff;
+  box-shadow: var(--glow);
+  transform: translateY(-1px);
+}
+.btn.secondary {
+  background: var(--card-2);
+  color: var(--text);
+  border-color: var(--border);
+}
+.btn.secondary:hover {
+  border-color: var(--primary);
+  box-shadow: none;
+}
+.btn.danger {
+  background: linear-gradient(135deg, #ff5c74, #ff7a5c);
+}
+.btn.danger:hover {
+  box-shadow: 0 8px 30px rgba(255, 92, 116, 0.28);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ---------- Forms ---------- */
+label {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+input,
+textarea,
+select {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #12141b;
+  color: var(--text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+input::placeholder,
+textarea::placeholder {
+  color: #5c6472;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18);
+}
+.field {
+  margin-bottom: 16px;
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0 0 18px;
+  letter-spacing: 0.3px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.error {
+  background: rgba(255, 92, 116, 0.12);
+  border: 1px solid rgba(255, 92, 116, 0.4);
+  color: #ff8b9c;
+  padding: 11px 13px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.stars {
+  color: var(--star);
+  letter-spacing: 2px;
+}
+
+.badge {
+  display: inline-block;
+  background: rgba(124, 92, 255, 0.16);
+  color: #b9a9ff;
+  border: 1px solid rgba(124, 92, 255, 0.28);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin: 2px 4px 2px 0;
+}
+
+/* ---------- Product image (no hard cropping) ---------- */
+.product-img {
+  width: 100%;
+  height: 170px;
+  object-fit: contain;
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(45deg, #12141b, #12141b 10px, #14171f 10px, #14171f 20px);
+  border: 1px solid var(--border);
+}
+.product-img.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 34px;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Product card hover ---------- */
+.grid .card {
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.grid .card:hover {
+  transform: translateY(-3px);
+  border-color: var(--primary);
+  box-shadow: var(--glow);
+}
+
+/* ---------- Segmented toggle ---------- */
+.seg {
+  display: inline-flex;
+  background: #12141b;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+}
+.seg-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 8px 16px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.seg-btn:hover {
+  color: var(--text);
+}
+.seg-btn.active {
+  background: linear-gradient(135deg, var(--primary), #9d7bff);
+  color: #fff;
+}
+
+/* ---------- vue-advanced-cropper tweaks ---------- */
+.vue-advanced-cropper__background,
+.vue-advanced-cropper__foreground {
+  background: #0d0f14;
+}
