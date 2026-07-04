@@ -1,0 +1,56 @@
+# Compose для Portainer — собирает образы прямо из репозитория
+# (ghcr.io и GitHub Actions НЕ нужны).
+#
+# В Portainer:  Stacks -> Add stack -> Repository
+#   Repository URL:  https://github.com/AlexeyKonoplia/project_chipsiki
+#   Reference:       refs/heads/main
+#   Compose path:    docker-compose.portainer.yml
+#   Environment variables: см. таблицу в ответе / файл .env ниже
+#
+# Portainer склонирует репо, соберёт backend и frontend по их Dockerfile
+# и поднимет весь стек.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-reviews}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-reviews}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-reviews}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      ADMIN_USERNAMES: ${ADMIN_USERNAMES:-koh0}
+    volumes:
+      - uploads_data:/app/uploads
+    # Только localhost: наружу не торчит, фронт ходит по внутренней сети.
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    # Публичный порт сайта. На сервере обычно 80.
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+
+volumes:
+  db_data:
+  uploads_data:
