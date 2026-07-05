@@ -43,6 +43,64 @@ function startRename(user) {
 function cancelRename() {
   editingId.value = null
 }
+// ---------- Category tree management ----------
+const catTree = ref([])
+const newSection = ref('')
+const newChild = ref({}) // section id -> draft subcategory name
+
+async function loadTree() {
+  const { data } = await api.get('/api/categories/tree')
+  catTree.value = data
+}
+
+async function addSection() {
+  const name = newSection.value.trim()
+  if (!name) return
+  try {
+    await api.post('/api/categories', { name })
+    newSection.value = ''
+    await loadTree()
+  } catch (e) {
+    alert(e.response?.data?.detail || 'Не удалось создать раздел')
+  }
+}
+
+async function addChild(section) {
+  const name = (newChild.value[section.id] || '').trim()
+  if (!name) return
+  try {
+    await api.post('/api/categories', { name, parent_id: section.id })
+    newChild.value[section.id] = ''
+    await loadTree()
+  } catch (e) {
+    alert(e.response?.data?.detail || 'Не удалось создать подкатегорию')
+  }
+}
+
+async function renameCat(cat) {
+  const name = prompt('Новое название категории:', cat.name)
+  if (!name || !name.trim() || name.trim() === cat.name) return
+  try {
+    await api.patch(`/api/categories/${cat.id}`, { name: name.trim() })
+    await loadTree()
+  } catch (e) {
+    alert(e.response?.data?.detail || 'Не удалось переименовать категорию')
+  }
+}
+
+async function removeCat(cat, isSection) {
+  const warn = isSection
+    ? `Удалить раздел «${cat.name}» вместе со всеми его подкатегориями?`
+    : `Удалить категорию «${cat.name}»?`
+  if (!confirm(warn + ' Она будет снята со всех товаров.')) return
+  try {
+    await api.delete(`/api/categories/${cat.id}`)
+    await loadTree()
+  } catch (e) {
+    alert(e.response?.data?.detail || 'Не удалось удалить категорию')
+  }
+}
+
 async function saveRename(user) {
   const name = editName.value.trim()
   if (name.length < 3) {
@@ -67,7 +125,10 @@ async function saveRename(user) {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  loadTree()
+})
 </script>
 
 <template>
@@ -137,6 +198,54 @@ onMounted(load)
       </tbody>
     </table>
   </div>
+
+  <h2 style="margin: 28px 0 6px">Категории</h2>
+  <p class="muted" style="margin: 0 0 14px">
+    Разделы и подкатегории, которые пользователи выбирают при создании карточки товара.
+  </p>
+
+  <div class="row" style="margin-bottom: 14px">
+    <input
+      v-model="newSection"
+      placeholder="Новый раздел…"
+      style="max-width: 240px"
+      @keyup.enter="addSection"
+    />
+    <button class="btn secondary" @click="addSection">Добавить раздел</button>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <div v-for="s in catTree" :key="s.id" class="card">
+      <div class="row" style="justify-content: space-between; flex-wrap: wrap">
+        <strong>{{ s.name }}</strong>
+        <div class="row" style="gap: 8px">
+          <button class="btn secondary cat-btn" @click="renameCat(s)">Переименовать</button>
+          <button class="btn danger cat-btn" @click="removeCat(s, true)">Удалить</button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px">
+        <span v-for="c in s.children" :key="c.id" class="badge cat-item">
+          {{ c.name }}
+          <button class="cat-x" title="Переименовать" @click="renameCat(c)">✎</button>
+          <button class="cat-x" title="Удалить" @click="removeCat(c, false)">✕</button>
+        </span>
+        <span v-if="s.children.length === 0" class="muted" style="font-size: 13px">
+          Нет подкатегорий
+        </span>
+      </div>
+
+      <div class="row" style="margin-top: 10px">
+        <input
+          v-model="newChild[s.id]"
+          placeholder="Новая подкатегория…"
+          style="max-width: 220px"
+          @keyup.enter="addChild(s)"
+        />
+        <button class="btn secondary cat-btn" @click="addChild(s)">Добавить</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -163,5 +272,26 @@ onMounted(load)
   background: rgba(232, 176, 75, 0.14);
   color: var(--primary);
   border-color: rgba(232, 176, 75, 0.4);
+}
+.cat-btn {
+  padding: 5px 12px;
+  font-size: 13px;
+}
+.cat-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.cat-x {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0 2px;
+  line-height: 1;
+}
+.cat-x:hover {
+  color: var(--primary);
 }
 </style>

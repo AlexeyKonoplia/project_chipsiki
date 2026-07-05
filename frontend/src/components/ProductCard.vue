@@ -1,5 +1,6 @@
 <script setup>
 import StarRating from './StarRating.vue'
+import TagList from './TagList.vue'
 
 defineProps({
   product: { type: Object, required: true },
@@ -26,6 +27,7 @@ defineProps({
     <div>
       <span v-for="c in product.categories" :key="c.id" class="badge">{{ c.name }}</span>
     </div>
+    <TagList :tags="product.tags" style="margin-top: 6px" />
     <div class="muted" style="margin-top: 6px">автор: {{ product.owner.username }}</div>
   </router-link>
 </template>

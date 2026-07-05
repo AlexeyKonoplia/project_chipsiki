@@ -1,13 +1,42 @@
+import re
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session, joinedload
 
 from ..database import get_db
 from ..deps import get_current_user
-from ..models import Product, Review, User
+from ..models import Product, Review, Tag, User
 from ..schemas import ReviewCreate, ReviewOut, ReviewUpdate, ReviewWithProduct
 from .products import serialize_product, _resolve_categories
 
 router = APIRouter(prefix="/api/reviews", tags=["reviews"])
+
+# Hashtags a user types inside the review text, e.g. "#пошелбыещераз".
+HASHTAG_RE = re.compile(r"#(\w+)")
+MAX_TAGS_PER_REVIEW = 10
+
+
+def _extract_tags(db: Session, text: str | None) -> list[Tag]:
+    """Parse hashtags out of the review text and get-or-create Tag rows."""
+    if not text:
+        return []
+    names: list[str] = []
+    for raw in HASHTAG_RE.findall(text):
+        name = raw.lower()
+        if len(name) > 64 or name in names:
+            continue
+        names.append(name)
+        if len(names) >= MAX_TAGS_PER_REVIEW:
+            break
+    tags: list[Tag] = []
+    for name in names:
+        tag = db.query(Tag).filter(Tag.name == name).first()
+        if not tag:
+            tag = Tag(name=name)
+            db.add(tag)
+            db.flush()
+        tags.append(tag)
+    return tags
 
 
 @router.get("", response_model=list[ReviewWithProduct])
@@ -18,6 +47,7 @@ def list_reviews(
 ):
     query = db.query(Review).options(
         joinedload(Review.author),
+        joinedload(Review.tags),
         joinedload(Review.product).joinedload(Product.owner),
         joinedload(Review.product).joinedload(Product.categories),
     )
@@ -85,6 +115,7 @@ def create_review(
         product_id=product.id,
         author_id=current_user.id,
     )
+    review.tags = _extract_tags(db, review.text)
     db.add(review)
     db.commit()
     db.refresh(review)
@@ -110,6 +141,7 @@ def update_review(
     review = _get_owned_review(db, review_id, current_user)
     review.rating = payload.rating
     review.text = payload.text.strip() if payload.text and payload.text.strip() else None
+    review.tags = _extract_tags(db, review.text)
     db.commit()
     db.refresh(review)
     return review

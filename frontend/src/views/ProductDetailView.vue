@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import api from '../api'
 import { useAuthStore } from '../store/auth'
 import StarRating from '../components/StarRating.vue'
+import TagList from '../components/TagList.vue'
 
 const props = defineProps({ id: { type: [String, Number], required: true } })
 const auth = useAuthStore()
@@ -129,6 +130,7 @@ onMounted(async () => {
           <div style="margin-bottom: 10px">
             <span v-for="c in product.categories" :key="c.id" class="badge">{{ c.name }}</span>
           </div>
+          <TagList :tags="product.tags" style="margin-bottom: 10px" />
           <p v-if="product.description" style="white-space: pre-wrap">{{ product.description }}</p>
           <p class="muted">
             Добавил:

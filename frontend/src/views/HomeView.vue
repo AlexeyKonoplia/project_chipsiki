@@ -4,7 +4,7 @@ import api from '../api'
 import ProductCard from '../components/ProductCard.vue'
 
 const products = ref([])
-const categories = ref([])
+const catTree = ref([])
 const loading = ref(true)
 const q = ref('')
 const categoryId = ref('')
@@ -23,8 +23,8 @@ async function load() {
 }
 
 onMounted(async () => {
-  const { data } = await api.get('/api/categories')
-  categories.value = data
+  const { data } = await api.get('/api/categories/tree')
+  catTree.value = data
   await load()
 })
 </script>
@@ -42,9 +42,15 @@ onMounted(async () => {
       style="max-width: 280px"
       @keyup.enter="load"
     />
-    <select v-model="categoryId" style="max-width: 220px" @change="load">
+    <select v-model="categoryId" style="max-width: 240px" @change="load">
       <option value="">Все категории</option>
-      <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
+      <template v-for="s in catTree" :key="s.id">
+        <optgroup v-if="s.children.length" :label="s.name">
+          <option :value="s.id">{{ s.name }} — всё</option>
+          <option v-for="c in s.children" :key="c.id" :value="c.id">{{ c.name }}</option>
+        </optgroup>
+        <option v-else :value="s.id">{{ s.name }}</option>
+      </template>
     </select>
     <button class="btn secondary" @click="load">Найти</button>
   </div>

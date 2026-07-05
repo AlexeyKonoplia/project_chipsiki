@@ -16,8 +16,8 @@ from sqlalchemy.orm import Session, joinedload
 from ..config import settings
 from ..database import get_db
 from ..deps import get_current_user
-from ..models import Category, Product, Review, User
-from ..schemas import ProductOut
+from ..models import Category, Product, Review, Tag, User, review_tags
+from ..schemas import ProductOut, TagOut
 from fastapi import Response
 
 router = APIRouter(prefix="/api/products", tags=["products"])
@@ -64,6 +64,18 @@ def serialize_product(db: Session, product: Product) -> ProductOut:
     out = ProductOut.model_validate(product)
     out.review_count = int(count or 0)
     out.average_rating = round(float(avg), 2) if avg is not None else None
+
+    # Hashtags aggregated over the product's reviews, most used first.
+    tag_rows = (
+        db.query(Tag)
+        .join(review_tags, review_tags.c.tag_id == Tag.id)
+        .join(Review, Review.id == review_tags.c.review_id)
+        .filter(Review.product_id == product.id)
+        .group_by(Tag.id)
+        .order_by(func.count(Review.id).desc(), Tag.name)
+        .all()
+    )
+    out.tags = [TagOut.model_validate(t) for t in tag_rows]
     return out
 
 
@@ -79,7 +91,12 @@ def list_products(
     if q:
         query = query.filter(Product.name.ilike(f"%{q.strip()}%"))
     if category_id:
-        query = query.filter(Product.categories.any(Category.id == category_id))
+        # Filtering by a top-level section also matches its subcategories.
+        child_ids = [
+            row.id
+            for row in db.query(Category.id).filter(Category.parent_id == category_id)
+        ]
+        query = query.filter(Product.categories.any(Category.id.in_([category_id, *child_ids])))
     products = query.order_by(Product.created_at.desc()).all()
     return [serialize_product(db, p) for p in products]
 

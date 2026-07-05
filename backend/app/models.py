@@ -25,6 +25,14 @@ product_categories = Table(
     Column("category_id", ForeignKey("categories.id", ondelete="CASCADE"), primary_key=True),
 )
 
+# Many-to-many association between reviews and hashtags.
+review_tags = Table(
+    "review_tags",
+    Base.metadata,
+    Column("review_id", ForeignKey("reviews.id", ondelete="CASCADE"), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True),
+)
+
 
 class User(Base):
     __tablename__ = "users"
@@ -41,13 +49,39 @@ class User(Base):
 
 
 class Category(Base):
+    """Two-level taxonomy: top-level sections (parent_id is NULL) contain
+    subcategories. Only admins may modify the tree."""
+
     __tablename__ = "categories"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(80), unique=True, index=True, nullable=False)
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("categories.id", ondelete="CASCADE"), nullable=True
+    )
+
+    parent: Mapped["Category | None"] = relationship(
+        remote_side="Category.id", back_populates="children"
+    )
+    children: Mapped[list["Category"]] = relationship(
+        back_populates="parent", order_by="Category.name"
+    )
 
     products: Mapped[list["Product"]] = relationship(
         secondary=product_categories, back_populates="categories"
+    )
+
+
+class Tag(Base):
+    """A user-written hashtag (stored without the leading '#', lowercase)."""
+
+    __tablename__ = "tags"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+
+    reviews: Mapped[list["Review"]] = relationship(
+        secondary=review_tags, back_populates="tags"
     )
 
 
@@ -87,3 +121,7 @@ class Review(Base):
 
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     author: Mapped["User"] = relationship(back_populates="reviews")
+
+    tags: Mapped[list["Tag"]] = relationship(
+        secondary=review_tags, back_populates="reviews"
+    )

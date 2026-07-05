@@ -140,6 +140,9 @@ async function submit() {
     <div class="field">
       <label>Текст отзыва (необязательно)</label>
       <textarea v-model="text" rows="4" placeholder="Поделитесь впечатлениями…"></textarea>
+      <p class="muted" style="margin: 6px 0 0; font-size: 12px">
+        Добавьте хештеги прямо в текст, например #пошелбыещераз — они появятся на карточке товара.
+      </p>
     </div>
 
     <button class="btn" :disabled="loading || !canSubmit" @click="submit">
