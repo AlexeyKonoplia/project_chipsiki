@@ -1,19 +1,26 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import api from '../api'
 import { useAuthStore } from '../store/auth'
 import CategorySelector from '../components/CategorySelector.vue'
 import TagInput from '../components/TagInput.vue'
 import ImageCropper from '../components/ImageCropper.vue'
 
+const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const canWrite = computed(() => !!auth.user && (auth.user.is_admin || auth.user.is_approved))
 
+// The listing page passes the category it was filtered by, so a product
+// created from a category page starts with that category selected.
+const presetCategory = Number(route.query.category_id)
+
 const name = ref('')
 const description = ref('')
-const categoryIds = ref([])
+const categoryIds = ref(
+  Number.isInteger(presetCategory) && presetCategory > 0 ? [presetCategory] : []
+)
 const tagNames = ref([])
 const cropper = ref(null)
 const error = ref('')

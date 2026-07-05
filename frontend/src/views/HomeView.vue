@@ -28,6 +28,17 @@ function toggleOrder() {
 const ADULT_SECTIONS = ['алкогольные напитки', 'табак']
 const AGE_KEY = 'age_confirmed'
 
+// The last category the user was browsing, restored when they come back
+// to the listing (e.g. via "Ко всем товарам"). 'all' = explicit "no filter".
+const LAST_CAT_KEY = 'last_category_id'
+
+function rememberCategory() {
+  localStorage.setItem(
+    LAST_CAT_KEY,
+    categoryId.value === null ? 'all' : String(categoryId.value)
+  )
+}
+
 // The signature category of the site (the service is named after it).
 // It is pinned on top of the sidebar and pre-selected on page load.
 const brandCat = ref(null)
@@ -48,6 +59,13 @@ const isAdult = (s) => ADULT_SECTIONS.includes(s.name.toLowerCase())
 const ageModal = ref(false)
 const pendingSection = ref(null)
 
+// "+ Добавить товар" carries the current category so the creation form
+// pre-selects it.
+const newProductRoute = computed(() => ({
+  path: '/new-product',
+  query: categoryId.value ? { category_id: categoryId.value } : {},
+}))
+
 async function load() {
   loading.value = true
   try {
@@ -64,6 +82,7 @@ async function load() {
 function pickAll() {
   categoryId.value = null
   expandedId.value = null
+  rememberCategory()
   load()
 }
 
@@ -71,6 +90,7 @@ function applySection(s) {
   // Clicking a section filters by it (subcategories included) and unfolds it.
   expandedId.value = expandedId.value === s.id && categoryId.value === s.id ? null : s.id
   categoryId.value = s.id
+  rememberCategory()
   load()
 }
 
@@ -98,15 +118,36 @@ function declineAge() {
 
 function pickChild(c) {
   categoryId.value = c.id
+  rememberCategory()
   load()
 }
 
 onMounted(async () => {
   const { data } = await api.get('/api/categories/tree')
   catTree.value = data
-  // Default view: the site's namesake category, when it exists in the DB.
   brandCat.value = findBrandCategory(data)
-  if (brandCat.value) categoryId.value = brandCat.value.id
+
+  // Restore the last category the user was browsing; fall back to the
+  // site's namesake category on the very first visit.
+  const stored = localStorage.getItem(LAST_CAT_KEY)
+  const all = []
+  for (const s of data) all.push(s, ...s.children)
+  const storedCat =
+    stored && stored !== 'all' ? all.find((c) => c.id === Number(stored)) : null
+  if (storedCat) {
+    const section = data.find(
+      (s) => s.id === storedCat.id || s.children.some((c) => c.id === storedCat.id)
+    )
+    if (section && isAdult(section) && localStorage.getItem(AGE_KEY) !== '1') {
+      // The age confirmation is gone — don't reopen an 18+ section silently.
+      if (brandCat.value) categoryId.value = brandCat.value.id
+    } else {
+      categoryId.value = storedCat.id
+      if (section && section.children.length) expandedId.value = section.id
+    }
+  } else if (stored !== 'all' && brandCat.value) {
+    categoryId.value = brandCat.value.id
+  }
   await load()
 })
 </script>
@@ -114,7 +155,7 @@ onMounted(async () => {
 <template>
   <div class="toolbar">
     <h1 class="title" style="margin: 0; flex: 1">Товары</h1>
-    <router-link v-if="canWrite" class="btn" to="/new-product">+ Добавить товар</router-link>
+    <router-link v-if="canWrite" class="btn" :to="newProductRoute">+ Добавить товар</router-link>
   </div>
 
   <div class="home-layout">
@@ -191,7 +232,7 @@ onMounted(async () => {
       <p v-else-if="products.length === 0" class="muted">
         Ничего не найдено.
         <template v-if="canWrite">
-          Будьте первым — <router-link to="/new-product">добавьте товар</router-link>.
+          Будьте первым — <router-link :to="newProductRoute">добавьте товар</router-link>.
         </template>
       </p>
       <div v-else class="grid">
