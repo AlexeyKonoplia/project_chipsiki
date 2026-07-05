@@ -7,39 +7,9 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 
-from sqlalchemy.orm import Session
-
 from .config import settings
 from .database import Base, engine
-from .models import Category
 from .routers import admin, auth, categories, products, reviews, users
-
-
-# Default marketplace-style taxonomy: section -> subcategories.
-# Seeded idempotently by name; admins can edit the tree afterwards.
-DEFAULT_CATEGORIES: dict[str, list[str]] = {
-    "Еда": [
-        "Пицца",
-        "Суши и роллы",
-        "Бургеры",
-        "Шаурма",
-        "Снеки и чипсы",
-        "Сладкое",
-        "Полуфабрикаты",
-    ],
-    "Напитки": ["Газировка", "Соки", "Энергетики", "Кофе", "Чай"],
-    # Age-restricted sections: alcohol is behind an 18+ gate on the main
-    # page, tobacco is not shown on the main page at all.
-    "Алкогольные напитки": ["Пиво", "Вино", "Крепкий алкоголь", "Коктейли"],
-    "Табак": [],
-    "Заведения": ["Кафе", "Рестораны", "Доставка", "Бары"],
-    "Магазины": ["Продуктовые", "Маркетплейсы", "Одежда и обувь"],
-    "Электроника": ["Смартфоны", "Наушники", "Компьютеры", "Гаджеты"],
-    "Дом и быт": ["Бытовая техника", "Мебель", "Для кухни"],
-    "Красота и здоровье": ["Косметика", "Аптека"],
-    "Развлечения": ["Игры", "Кино", "Книги"],
-    "Прочее": [],
-}
 
 
 def _wait_for_db(retries: int = 30, delay: float = 2.0) -> None:
@@ -100,25 +70,6 @@ def _bootstrap_db() -> None:
                 text("UPDATE users SET is_admin = true WHERE username = ANY(:names)"),
                 {"names": settings.admin_usernames},
             )
-
-    _seed_categories()
-
-
-def _seed_categories() -> None:
-    # Insert any missing default sections/subcategories (matched by name),
-    # leaving everything the admins created or renamed untouched.
-    with Session(engine) as db:
-        for section_name, sub_names in DEFAULT_CATEGORIES.items():
-            section = db.query(Category).filter(Category.name == section_name).first()
-            if not section:
-                section = Category(name=section_name)
-                db.add(section)
-                db.flush()
-            for sub_name in sub_names:
-                exists = db.query(Category).filter(Category.name == sub_name).first()
-                if not exists:
-                    db.add(Category(name=sub_name, parent_id=section.id))
-        db.commit()
 
 
 _bootstrap_db()

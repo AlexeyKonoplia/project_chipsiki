@@ -27,6 +27,22 @@ function toggleOrder() {
 // listing and the section opens only after the 18+ confirmation.
 const ADULT_SECTIONS = ['алкогольные напитки', 'табак']
 const AGE_KEY = 'age_confirmed'
+
+// The signature category of the site (the service is named after it).
+// It is pinned on top of the sidebar and pre-selected on page load.
+const brandCat = ref(null)
+
+function findBrandCategory(tree) {
+  const all = []
+  for (const s of tree) {
+    all.push(s, ...s.children)
+  }
+  return (
+    all.find((c) => c.name.toLowerCase() === 'чипсы и снеки') ||
+    all.find((c) => c.name.toLowerCase().includes('чипс')) ||
+    null
+  )
+}
 const isAdult = (s) => ADULT_SECTIONS.includes(s.name.toLowerCase())
 
 const ageModal = ref(false)
@@ -88,6 +104,9 @@ function pickChild(c) {
 onMounted(async () => {
   const { data } = await api.get('/api/categories/tree')
   catTree.value = data
+  // Default view: the site's namesake category, when it exists in the DB.
+  brandCat.value = findBrandCategory(data)
+  if (brandCat.value) categoryId.value = brandCat.value.id
   await load()
 })
 </script>
@@ -101,6 +120,16 @@ onMounted(async () => {
   <div class="home-layout">
     <!-- Category sidebar -->
     <aside class="cat-side">
+      <button
+        v-if="brandCat"
+        class="cat-link brand"
+        :class="{ active: categoryId === brandCat.id }"
+        title="Категория, в честь которой назван сайт"
+        @click="pickChild(brandCat)"
+      >
+        <span>{{ brandCat.name }}</span>
+        <span class="brand-chip">это мы</span>
+      </button>
       <button class="cat-link" :class="{ active: !categoryId }" @click="pickAll">
         Все категории
       </button>
@@ -232,6 +261,28 @@ onMounted(async () => {
 .cat-link.child {
   font-size: 13px;
   padding-left: 22px;
+}
+.cat-link.brand {
+  color: var(--text);
+  border: 1px solid rgba(232, 176, 75, 0.35);
+  background: rgba(232, 176, 75, 0.06);
+  margin-bottom: 4px;
+}
+.cat-link.brand:hover,
+.cat-link.brand.active {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: rgba(232, 176, 75, 0.12);
+}
+.brand-chip {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--primary-contrast);
+  background: var(--primary);
+  border-radius: 999px;
+  padding: 2px 7px;
 }
 .cat-arrow {
   color: var(--muted);
