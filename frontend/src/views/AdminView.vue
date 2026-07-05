@@ -122,7 +122,7 @@ onMounted(load)
                 <button class="btn secondary" @click="cancelRename">Отмена</button>
               </template>
               <template v-else>
-                <button class="btn secondary" @click="startRename(u)">✏️ Ник</button>
+                <button class="btn secondary" @click="startRename(u)">Переименовать</button>
                 <button
                   class="btn secondary"
                   :disabled="u.id === auth.user?.id && u.is_admin"
@@ -160,8 +160,8 @@ onMounted(load)
   border-bottom: none;
 }
 .badge.admin {
-  background: rgba(0, 229, 192, 0.16);
-  color: var(--accent);
-  border-color: rgba(0, 229, 192, 0.3);
+  background: rgba(232, 176, 75, 0.14);
+  color: var(--primary);
+  border-color: rgba(232, 176, 75, 0.4);
 }
 </style>

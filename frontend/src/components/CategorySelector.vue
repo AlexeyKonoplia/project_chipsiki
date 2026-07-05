@@ -73,8 +73,7 @@ async function addCategory() {
       <span
         v-for="c in selected"
         :key="c.id"
-        class="badge"
-        :style="{ cursor: 'pointer', background: 'var(--primary)', color: '#fff' }"
+        class="badge selected"
         @click="toggle(c.id)"
       >
         {{ c.name }} ✕
@@ -105,8 +104,7 @@ async function addCategory() {
       <span
         v-for="c in filtered"
         :key="c.id"
-        class="badge"
-        style="cursor: pointer; background: #eef2ff; color: var(--primary-dark)"
+        class="badge pickable"
         @click="toggle(c.id)"
       >
         {{ c.name }}

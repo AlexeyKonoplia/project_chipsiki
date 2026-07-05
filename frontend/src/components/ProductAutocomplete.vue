@@ -74,7 +74,7 @@ onBeforeUnmount(() => clearTimeout(timer))
     <div v-if="selected" class="ac-selected">
       <span class="ac-thumb">
         <img v-if="selected.image_url" :src="selected.image_url" :alt="selected.name" />
-        <span v-else>📦</span>
+        <span v-else class="icon-img sm"></span>
       </span>
       <span class="ac-body">
         <span class="ac-name">{{ selected.name }}</span>
@@ -112,7 +112,7 @@ onBeforeUnmount(() => clearTimeout(timer))
         >
           <span class="ac-thumb">
             <img v-if="p.image_url" :src="p.image_url" :alt="p.name" />
-            <span v-else>📦</span>
+            <span v-else class="icon-img sm"></span>
           </span>
           <span class="ac-body">
             <span class="ac-name">{{ p.name }}</span>
@@ -137,7 +137,7 @@ onBeforeUnmount(() => clearTimeout(timer))
   padding: 8px 10px;
   border: 1px solid var(--primary);
   border-radius: 10px;
-  background: rgba(124, 92, 255, 0.1);
+  background: rgba(232, 176, 75, 0.08);
 }
 .ac-clear {
   margin-left: auto;
@@ -183,13 +183,13 @@ onBeforeUnmount(() => clearTimeout(timer))
   color: var(--text);
 }
 .ac-item:hover {
-  background: rgba(124, 92, 255, 0.14);
+  background: rgba(232, 176, 75, 0.1);
 }
 .ac-thumb {
   width: 38px;
   height: 38px;
   border-radius: 8px;
-  background: #0d0f14;
+  background: var(--bg-2);
   display: flex;
   align-items: center;
   justify-content: center;

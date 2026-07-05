@@ -115,7 +115,7 @@ onMounted(async () => {
       <div style="display: flex; gap: 20px; flex-wrap: wrap">
         <div style="flex: 0 0 240px">
           <img v-if="product.image_url" :src="product.image_url" :alt="product.name" class="product-img" style="height: 220px" />
-          <div v-else class="product-img placeholder" style="height: 220px">📦</div>
+          <div v-else class="product-img placeholder" style="height: 220px"><span class="icon-img lg"></span></div>
         </div>
         <div style="flex: 1; min-width: 240px">
           <h1 class="title" style="margin-bottom: 8px">{{ product.name }}</h1>
@@ -146,10 +146,10 @@ onMounted(async () => {
               class="btn secondary"
               :to="{ name: 'edit-product', params: { id: product.id } }"
             >
-              ✏️ Редактировать
+              Редактировать
             </router-link>
             <button v-if="canManageProduct" class="btn danger" :disabled="deleting" @click="removeProduct">
-              {{ deleting ? 'Удаление…' : '🗑 Удалить' }}
+              {{ deleting ? 'Удаление…' : 'Удалить' }}
             </button>
           </div>
         </div>
@@ -175,10 +175,10 @@ onMounted(async () => {
           <p v-if="r.text" style="margin: 8px 0 0; white-space: pre-wrap">{{ r.text }}</p>
           <div v-if="canManageReview(r)" class="row" style="gap: 8px; margin-top: 10px">
             <button class="btn secondary" style="padding: 5px 12px" @click="startEdit(r)">
-              ✏️ Изменить
+              Изменить
             </button>
             <button class="btn danger" style="padding: 5px 12px" @click="removeReview(r)">
-              🗑 Удалить
+              Удалить
             </button>
           </div>
         </template>

@@ -42,7 +42,7 @@ watch(() => props.id, load)
   <template v-else>
     <router-link to="/" class="muted">← Ко всем товарам</router-link>
     <h1 class="title" style="margin-top: 12px">
-      👤 {{ user.username }}
+      {{ user.username }}
       <span v-if="user.is_admin" class="badge" style="vertical-align: middle">админ</span>
     </h1>
     <p class="muted" style="margin-top: -8px">Отзывов: {{ reviews.length }}</p>
@@ -58,7 +58,7 @@ watch(() => props.id, load)
           >
             <span class="ac-thumb-mini">
               <img v-if="r.product.image_url" :src="r.product.image_url" :alt="r.product.name" />
-              <span v-else>📦</span>
+              <span v-else class="icon-img sm"></span>
             </span>
             <span>
               <strong>{{ r.product.name }}</strong>
@@ -79,7 +79,7 @@ watch(() => props.id, load)
   width: 44px;
   height: 44px;
   border-radius: 8px;
-  background: #0d0f14;
+  background: var(--bg-2);
   border: 1px solid var(--border);
   display: inline-flex;
   align-items: center;

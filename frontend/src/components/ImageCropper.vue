@@ -102,7 +102,7 @@ onBeforeUnmount(() => {
       @dragleave.prevent="dragOver = false"
       @drop.prevent="onDrop"
     >
-      <div class="dz-icon">🖼️</div>
+      <div class="dz-icon"><span class="icon-img lg"></span></div>
       <div class="dz-title">Выберите, перетащите или вставьте фото</div>
       <div class="muted" style="font-size: 12px; margin-top: 4px">
         Нажмите для выбора файла · перетащите сюда · <kbd>Ctrl</kbd> + <kbd>V</kbd> из буфера
@@ -163,11 +163,11 @@ onBeforeUnmount(() => {
   border-color: var(--primary);
 }
 .dropzone.over {
-  border-color: var(--accent);
-  background: rgba(0, 229, 192, 0.08);
+  border-color: var(--primary);
+  background: rgba(232, 176, 75, 0.07);
 }
 .dz-icon {
-  font-size: 30px;
+  line-height: 0;
 }
 .dz-title {
   font-size: 14px;
@@ -176,7 +176,7 @@ onBeforeUnmount(() => {
   margin-top: 6px;
 }
 kbd {
-  background: #12141b;
+  background: var(--bg-2);
   border: 1px solid var(--border);
   border-radius: 5px;
   padding: 1px 5px;
@@ -206,7 +206,7 @@ kbd {
 .chip.active {
   background: var(--primary);
   border-color: var(--primary);
-  color: #fff;
+  color: var(--primary-contrast);
 }
 .chip.danger:hover {
   color: var(--danger);

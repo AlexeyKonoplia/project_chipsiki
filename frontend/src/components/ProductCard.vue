@@ -11,7 +11,7 @@ defineProps({
     <div v-if="product.image_url">
       <img :src="product.image_url" :alt="product.name" class="product-img" />
     </div>
-    <div v-else class="product-img placeholder">📦</div>
+    <div v-else class="product-img placeholder"><span class="icon-img"></span></div>
 
     <h3 style="margin: 12px 0 4px; font-size: 16px">{{ product.name }}</h3>
 
