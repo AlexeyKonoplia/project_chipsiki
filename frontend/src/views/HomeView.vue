@@ -23,14 +23,10 @@ function toggleOrder() {
   load()
 }
 
-// Sections removed from the main page; alcohol is shown but age-gated.
-const HIDDEN_SECTIONS = ['табак']
-const ADULT_SECTIONS = ['алкогольные напитки']
+// Age-gated sections: their products are excluded from the general
+// listing and the section opens only after the 18+ confirmation.
+const ADULT_SECTIONS = ['алкогольные напитки', 'табак']
 const AGE_KEY = 'age_confirmed'
-
-const visibleTree = computed(() =>
-  catTree.value.filter((s) => !HIDDEN_SECTIONS.includes(s.name.toLowerCase()))
-)
 const isAdult = (s) => ADULT_SECTIONS.includes(s.name.toLowerCase())
 
 const ageModal = ref(false)
@@ -108,7 +104,7 @@ onMounted(async () => {
       <button class="cat-link" :class="{ active: !categoryId }" @click="pickAll">
         Все категории
       </button>
-      <div v-for="s in visibleTree" :key="s.id">
+      <div v-for="s in catTree" :key="s.id">
         <button
           class="cat-link"
           :class="{ active: categoryId === s.id }"
@@ -181,7 +177,7 @@ onMounted(async () => {
       <div class="age-badge">18+</div>
       <h2 style="margin: 12px 0 6px">Раздел для совершеннолетних</h2>
       <p class="muted" style="margin: 0 0 18px">
-        Здесь обсуждаются алкогольные напитки. Вам уже исполнилось 18 лет?
+        Этот раздел содержит товары для совершеннолетних. Вам уже исполнилось 18 лет?
       </p>
       <div class="row" style="justify-content: center">
         <button class="btn" @click="confirmAge">Да, мне есть 18</button>
