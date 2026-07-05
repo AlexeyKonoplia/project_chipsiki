@@ -35,6 +35,14 @@ function logout() {
   </div>
 
   <div class="container">
+    <div
+      v-if="auth.user && !auth.user.is_admin && !auth.user.is_approved"
+      class="error"
+      style="background: rgba(232, 176, 75, 0.08); border-color: rgba(232, 176, 75, 0.35); color: var(--primary)"
+    >
+      Ваш аккаунт ещё не подтверждён администратором. Пока вы можете только читать отзывы —
+      писать отзывы и добавлять товары станет доступно после подтверждения.
+    </div>
     <router-view />
   </div>
 </template>

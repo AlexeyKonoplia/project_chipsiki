@@ -17,12 +17,14 @@ class UserOut(UserBase):
     model_config = ConfigDict(from_attributes=True)
     id: int
     is_admin: bool
+    is_approved: bool
     created_at: datetime
 
 
 class AdminUpdate(BaseModel):
     # Partial update: any subset of fields may be provided.
     is_admin: bool | None = None
+    is_approved: bool | None = None
     username: str | None = Field(default=None, min_length=3, max_length=64)
 
 
@@ -96,8 +98,11 @@ class ProductOut(BaseModel):
     categories: list[CategoryOut]
     review_count: int = 0
     average_rating: float | None = None
-    # Hashtags aggregated from this product's reviews (most used first).
+    # Combined tags: the product's own user tags plus hashtags aggregated
+    # from its reviews (own first, then most used).
     tags: list[TagOut] = []
+    # Only the product's own tags — what the edit form should prefill.
+    own_tags: list[TagOut] = []
 
 
 # ---------- Reviews ----------

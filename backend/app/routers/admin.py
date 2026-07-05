@@ -32,6 +32,11 @@ def update_user(
                 detail="Нельзя снять права администратора с самого себя",
             )
         user.is_admin = payload.is_admin
+        if payload.is_admin:
+            user.is_approved = True
+
+    if payload.is_approved is not None:
+        user.is_approved = payload.is_approved
 
     if payload.username is not None:
         new_username = payload.username.strip()

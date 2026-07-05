@@ -33,6 +33,15 @@ review_tags = Table(
     Column("tag_id", ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True),
 )
 
+# Many-to-many association between products and user-supplied tags
+# (free-form, unlike the admin-curated category tree).
+product_tags = Table(
+    "product_tags",
+    Base.metadata,
+    Column("product_id", ForeignKey("products.id", ondelete="CASCADE"), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True),
+)
+
 
 class User(Base):
     __tablename__ = "users"
@@ -42,6 +51,10 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    # New accounts are read-only until an admin approves them. The server
+    # default is "true" so the migration backfills pre-existing users as
+    # approved; the register endpoint sets the real value explicitly.
+    is_approved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="true")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     products: Mapped[list["Product"]] = relationship(back_populates="owner")
@@ -83,6 +96,9 @@ class Tag(Base):
     reviews: Mapped[list["Review"]] = relationship(
         secondary=review_tags, back_populates="tags"
     )
+    products: Mapped[list["Product"]] = relationship(
+        secondary=product_tags, back_populates="tags"
+    )
 
 
 class Product(Base):
@@ -99,6 +115,9 @@ class Product(Base):
 
     categories: Mapped[list["Category"]] = relationship(
         secondary=product_categories, back_populates="products"
+    )
+    tags: Mapped[list["Tag"]] = relationship(
+        secondary=product_tags, back_populates="products", order_by="Tag.name"
     )
     reviews: Mapped[list["Review"]] = relationship(
         back_populates="product", cascade="all, delete-orphan"

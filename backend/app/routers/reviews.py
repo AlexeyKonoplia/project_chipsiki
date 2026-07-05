@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session, joinedload
 
 from ..database import get_db
-from ..deps import get_current_user
+from ..deps import get_current_approved_user, get_current_user
 from ..models import Product, Review, Tag, User
 from ..schemas import ReviewCreate, ReviewOut, ReviewUpdate, ReviewWithProduct
 from .products import serialize_product, _resolve_categories
@@ -69,7 +69,7 @@ def list_reviews(
 def create_review(
     payload: ReviewCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_approved_user),
 ):
     product: Product | None = None
 
@@ -136,7 +136,7 @@ def update_review(
     review_id: int,
     payload: ReviewUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_approved_user),
 ):
     review = _get_owned_review(db, review_id, current_user)
     review.rating = payload.rating

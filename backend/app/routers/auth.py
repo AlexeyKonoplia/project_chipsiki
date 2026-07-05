@@ -26,11 +26,14 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
             detail="Пользователь с таким именем или email уже существует",
         )
 
+    is_admin = payload.username in settings.admin_usernames
     user = User(
         username=payload.username,
         email=payload.email,
         hashed_password=hash_password(payload.password),
-        is_admin=payload.username in settings.admin_usernames,
+        is_admin=is_admin,
+        # New accounts are read-only until an admin approves them.
+        is_approved=is_admin,
     )
     db.add(user)
     db.commit()

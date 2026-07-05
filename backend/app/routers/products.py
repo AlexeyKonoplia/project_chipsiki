@@ -10,12 +10,12 @@ from fastapi import (
     UploadFile,
     status,
 )
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from ..config import settings
 from ..database import get_db
-from ..deps import get_current_user
+from ..deps import get_current_approved_user, get_current_user
 from ..models import Category, Product, Review, Tag, User, review_tags
 from ..schemas import ProductOut, TagOut
 from fastapi import Response
@@ -54,6 +54,30 @@ def _resolve_categories(db: Session, category_ids: list[int]) -> list[Category]:
     return cats
 
 
+MAX_PRODUCT_TAGS = 10
+
+
+def resolve_tags(db: Session, names: list[str]) -> list[Tag]:
+    """Normalize user-typed tag names (case-insensitive) and get-or-create rows."""
+    seen: list[str] = []
+    for raw in names:
+        name = raw.strip().lstrip("#").strip().lower()
+        if not name or len(name) > 64 or name in seen:
+            continue
+        seen.append(name)
+        if len(seen) >= MAX_PRODUCT_TAGS:
+            break
+    tags: list[Tag] = []
+    for name in seen:
+        tag = db.query(Tag).filter(func.lower(Tag.name) == name).first()
+        if not tag:
+            tag = Tag(name=name)
+            db.add(tag)
+            db.flush()
+        tags.append(tag)
+    return tags
+
+
 def serialize_product(db: Session, product: Product) -> ProductOut:
     stats = (
         db.query(func.count(Review.id), func.avg(Review.rating))
@@ -75,7 +99,11 @@ def serialize_product(db: Session, product: Product) -> ProductOut:
         .order_by(func.count(Review.id).desc(), Tag.name)
         .all()
     )
-    out.tags = [TagOut.model_validate(t) for t in tag_rows]
+    # Combined list: the product's own user tags first, then review hashtags.
+    own = [TagOut.model_validate(t) for t in product.tags]
+    own_ids = {t.id for t in own}
+    out.own_tags = own
+    out.tags = own + [TagOut.model_validate(t) for t in tag_rows if t.id not in own_ids]
     return out
 
 
@@ -89,7 +117,17 @@ def list_products(
         joinedload(Product.owner), joinedload(Product.categories)
     )
     if q:
-        query = query.filter(Product.name.ilike(f"%{q.strip()}%"))
+        # Case-insensitive match across the name, categories and tags
+        # (both the product's own tags and its reviews' hashtags).
+        pat = f"%{q.strip().lstrip('#')}%"
+        query = query.filter(
+            or_(
+                Product.name.ilike(pat),
+                Product.categories.any(Category.name.ilike(pat)),
+                Product.tags.any(Tag.name.ilike(pat)),
+                Product.reviews.any(Review.tags.any(Tag.name.ilike(pat))),
+            )
+        )
     if category_id:
         # Filtering by a top-level section also matches its subcategories.
         child_ids = [
@@ -115,9 +153,11 @@ def create_product(
     description: str | None = Form(None),
     # Categories arrive as repeated form fields: category_ids=1&category_ids=2
     category_ids: list[int] = Form(default=[]),
+    # Free-form user tags, likewise repeated: tags=вкусно&tags=остро
+    tags: list[str] = Form(default=[]),
     image: UploadFile | None = File(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_approved_user),
 ):
     name = name.strip()
     if not name:
@@ -132,6 +172,7 @@ def create_product(
         owner_id=current_user.id,
     )
     product.categories = _resolve_categories(db, category_ids)
+    product.tags = resolve_tags(db, tags)
     db.add(product)
     db.commit()
     db.refresh(product)
@@ -144,10 +185,11 @@ def update_product(
     name: str = Form(...),
     description: str | None = Form(None),
     category_ids: list[int] = Form(default=[]),
+    tags: list[str] = Form(default=[]),
     image: UploadFile | None = File(None),
     remove_image: bool = Form(False),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_approved_user),
 ):
     product = db.get(Product, product_id)
     if not product:
@@ -162,6 +204,7 @@ def update_product(
     product.name = name
     product.description = description.strip() if description and description.strip() else None
     product.categories = _resolve_categories(db, category_ids)
+    product.tags = resolve_tags(db, tags)
 
     if image is not None:
         product.image_url = _save_image(image)

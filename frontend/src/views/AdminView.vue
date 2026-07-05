@@ -36,6 +36,17 @@ async function toggle(user) {
   }
 }
 
+async function toggleApproved(user) {
+  try {
+    const { data } = await api.patch(`/api/admin/users/${user.id}`, {
+      is_approved: !user.is_approved,
+    })
+    Object.assign(user, data)
+  } catch (e) {
+    alert(e.response?.data?.detail || 'Не удалось изменить статус')
+  }
+}
+
 function startRename(user) {
   editingId.value = user.id
   editName.value = user.username
@@ -134,7 +145,8 @@ onMounted(() => {
 <template>
   <h1 class="title">Администрирование</h1>
   <p class="muted" style="margin-top: -8px">
-    Управление правами администраторов. Администраторы могут удалять любые товары.
+    Подтверждение новых пользователей и управление правами. Неподтверждённые аккаунты
+    могут только читать отзывы.
   </p>
 
   <div v-if="error" class="error">{{ error }}</div>
@@ -173,6 +185,9 @@ onMounted(() => {
             <span class="badge" :class="{ admin: u.is_admin }">
               {{ u.is_admin ? 'Админ' : 'Пользователь' }}
             </span>
+            <span v-if="!u.is_admin" class="badge" :class="{ admin: u.is_approved }">
+              {{ u.is_approved ? 'Подтверждён' : 'Ожидает' }}
+            </span>
           </td>
           <td style="text-align: right">
             <div class="row" style="gap: 8px; justify-content: flex-end; flex-wrap: wrap">
@@ -183,6 +198,14 @@ onMounted(() => {
                 <button class="btn secondary" @click="cancelRename">Отмена</button>
               </template>
               <template v-else>
+                <button
+                  v-if="!u.is_admin"
+                  class="btn"
+                  :class="{ secondary: u.is_approved }"
+                  @click="toggleApproved(u)"
+                >
+                  {{ u.is_approved ? 'Отозвать доступ' : 'Подтвердить' }}
+                </button>
                 <button class="btn secondary" @click="startRename(u)">Переименовать</button>
                 <button
                   class="btn secondary"

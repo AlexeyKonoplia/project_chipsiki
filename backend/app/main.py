@@ -81,6 +81,15 @@ def _bootstrap_db() -> None:
                 "integer REFERENCES categories(id) ON DELETE CASCADE"
             )
         )
+        # Account approval: pre-existing users are backfilled as approved
+        # (DEFAULT true); new registrations start unapproved.
+        conn.execute(
+            text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved "
+                "boolean NOT NULL DEFAULT true"
+            )
+        )
+        conn.execute(text("UPDATE users SET is_approved = true WHERE is_admin = true"))
         # Grant admin to the configured usernames if they already exist.
         if settings.admin_usernames:
             conn.execute(

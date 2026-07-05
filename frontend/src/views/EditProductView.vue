@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import api from '../api'
 import { useAuthStore } from '../store/auth'
 import CategorySelector from '../components/CategorySelector.vue'
+import TagInput from '../components/TagInput.vue'
 import ImageCropper from '../components/ImageCropper.vue'
 
 const props = defineProps({ id: { type: [String, Number], required: true } })
@@ -13,6 +14,7 @@ const auth = useAuthStore()
 const name = ref('')
 const description = ref('')
 const categoryIds = ref([])
+const tagNames = ref([])
 const currentImage = ref(null)
 const removeImage = ref(false)
 const cropper = ref(null)
@@ -32,6 +34,7 @@ onMounted(async () => {
     name.value = data.name
     description.value = data.description || ''
     categoryIds.value = data.categories.map((c) => c.id)
+    tagNames.value = (data.own_tags || []).map((t) => t.name)
     currentImage.value = data.image_url
   } catch {
     error.value = 'Не удалось загрузить товар'
@@ -52,6 +55,7 @@ async function save() {
     form.append('name', name.value.trim())
     if (description.value.trim()) form.append('description', description.value.trim())
     categoryIds.value.forEach((cid) => form.append('category_ids', cid))
+    tagNames.value.forEach((t) => form.append('tags', t))
     const file = cropper.value ? await cropper.value.getFile() : null
     if (file) {
       form.append('image', file)
@@ -85,6 +89,11 @@ async function save() {
     <div class="field">
       <label>Категории</label>
       <CategorySelector v-model="categoryIds" />
+    </div>
+
+    <div class="field">
+      <label>Теги</label>
+      <TagInput v-model="tagNames" />
     </div>
 
     <div class="field">
