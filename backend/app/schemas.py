@@ -21,7 +21,9 @@ class UserOut(UserBase):
 
 
 class AdminUpdate(BaseModel):
-    is_admin: bool
+    # Partial update: any subset of fields may be provided.
+    is_admin: bool | None = None
+    username: str | None = Field(default=None, min_length=3, max_length=64)
 
 
 class UserPublic(BaseModel):

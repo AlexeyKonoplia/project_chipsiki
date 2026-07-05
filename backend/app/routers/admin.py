@@ -15,7 +15,7 @@ def list_users(db: Session = Depends(get_db), _: User = Depends(get_current_admi
 
 
 @router.patch("/users/{user_id}", response_model=UserOut)
-def set_admin(
+def update_user(
     user_id: int,
     payload: AdminUpdate,
     db: Session = Depends(get_db),
@@ -24,12 +24,34 @@ def set_admin(
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
-    if user.id == current_admin.id and not payload.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Нельзя снять права администратора с самого себя",
+
+    if payload.is_admin is not None:
+        if user.id == current_admin.id and not payload.is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Нельзя снять права администратора с самого себя",
+            )
+        user.is_admin = payload.is_admin
+
+    if payload.username is not None:
+        new_username = payload.username.strip()
+        if len(new_username) < 3:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Имя пользователя должно быть не короче 3 символов",
+            )
+        clash = (
+            db.query(User)
+            .filter(User.username == new_username, User.id != user.id)
+            .first()
         )
-    user.is_admin = payload.is_admin
+        if clash:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Имя пользователя уже занято",
+            )
+        user.username = new_username
+
     db.commit()
     db.refresh(user)
     return user

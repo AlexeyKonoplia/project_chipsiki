@@ -32,8 +32,8 @@ async function submit() {
     <div v-if="error" class="error">{{ error }}</div>
     <form @submit.prevent="submit">
       <div class="field">
-        <label>Имя пользователя</label>
-        <input v-model="username" required autocomplete="username" />
+        <label>Имя пользователя или email</label>
+        <input v-model="username" required autocomplete="username" placeholder="Имя пользователя или email" />
       </div>
       <div class="field">
         <label>Пароль</label>
