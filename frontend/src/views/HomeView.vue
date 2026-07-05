@@ -16,6 +16,12 @@ const q = ref('')
 const categoryId = ref(null)
 const expandedId = ref(null) // which section is unfolded in the sidebar
 const sort = ref('new')
+const order = ref('desc')
+
+function toggleOrder() {
+  order.value = order.value === 'desc' ? 'asc' : 'desc'
+  load()
+}
 
 // Sections removed from the main page; alcohol is shown but age-gated.
 const HIDDEN_SECTIONS = ['табак']
@@ -33,7 +39,7 @@ const pendingSection = ref(null)
 async function load() {
   loading.value = true
   try {
-    const params = { sort: sort.value }
+    const params = { sort: sort.value, order: order.value }
     if (q.value.trim()) params.q = q.value.trim()
     if (categoryId.value) params.category_id = categoryId.value
     const { data } = await api.get('/api/products', { params })
@@ -140,11 +146,20 @@ onMounted(async () => {
           @keyup.enter="load"
         />
         <button class="btn secondary" @click="load">Найти</button>
-        <select v-model="sort" style="max-width: 190px; margin-left: auto" @change="load">
-          <option value="new">Сначала новые</option>
-          <option value="rating">По оценке</option>
-          <option value="reviews">По числу отзывов</option>
-        </select>
+        <div class="row" style="gap: 6px; margin-left: auto">
+          <select v-model="sort" style="max-width: 190px" @change="load">
+            <option value="new">По дате добавления</option>
+            <option value="rating">По оценке</option>
+            <option value="reviews">По числу отзывов</option>
+          </select>
+          <button
+            class="btn secondary order-btn"
+            :title="order === 'desc' ? 'По убыванию — нажмите для сортировки по возрастанию' : 'По возрастанию — нажмите для сортировки по убыванию'"
+            @click="toggleOrder"
+          >
+            {{ order === 'desc' ? '↓' : '↑' }}
+          </button>
+        </div>
       </div>
 
       <p v-if="loading" class="muted">Загрузка…</p>
@@ -236,6 +251,12 @@ onMounted(async () => {
   flex-direction: column;
   gap: 2px;
   margin-top: 2px;
+}
+
+.order-btn {
+  padding: 10px 13px;
+  font-size: 16px;
+  line-height: 1;
 }
 
 .age-chip {

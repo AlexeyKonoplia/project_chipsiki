@@ -135,6 +135,7 @@ def list_products(
     q: str | None = None,
     category_id: int | None = None,
     sort: str = "new",  # new | rating | reviews
+    order: str = "desc",  # desc | asc
     include_adult: bool = False,
     db: Session = Depends(get_db),
 ):
@@ -167,6 +168,10 @@ def list_products(
     if adult_ids and not include_adult:
         query = query.filter(~Product.categories.any(Category.id.in_(adult_ids)))
 
+    # Sort direction; products without reviews always go last.
+    def _dir(col):
+        return col.asc().nulls_last() if order == "asc" else col.desc().nulls_last()
+
     if sort in ("rating", "reviews"):
         stats = (
             db.query(
@@ -180,16 +185,14 @@ def list_products(
         query = query.outerjoin(stats, stats.c.product_id == Product.id)
         if sort == "rating":
             query = query.order_by(
-                stats.c.avg_rating.desc().nulls_last(),
-                stats.c.cnt.desc().nulls_last(),
+                _dir(stats.c.avg_rating),
+                _dir(stats.c.cnt),
                 Product.created_at.desc(),
             )
         else:
-            query = query.order_by(
-                stats.c.cnt.desc().nulls_last(), Product.created_at.desc()
-            )
+            query = query.order_by(_dir(stats.c.cnt), Product.created_at.desc())
     else:
-        query = query.order_by(Product.created_at.desc())
+        query = query.order_by(_dir(Product.created_at))
 
     products = query.all()
     return [serialize_product(db, p) for p in products]
