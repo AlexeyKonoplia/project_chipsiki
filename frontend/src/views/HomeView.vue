@@ -15,11 +15,25 @@ const loading = ref(true)
 const q = ref('')
 const categoryId = ref(null)
 const expandedId = ref(null) // which section is unfolded in the sidebar
+const sort = ref('new')
+
+// Sections removed from the main page; alcohol is shown but age-gated.
+const HIDDEN_SECTIONS = ['табак']
+const ADULT_SECTIONS = ['алкогольные напитки']
+const AGE_KEY = 'age_confirmed'
+
+const visibleTree = computed(() =>
+  catTree.value.filter((s) => !HIDDEN_SECTIONS.includes(s.name.toLowerCase()))
+)
+const isAdult = (s) => ADULT_SECTIONS.includes(s.name.toLowerCase())
+
+const ageModal = ref(false)
+const pendingSection = ref(null)
 
 async function load() {
   loading.value = true
   try {
-    const params = {}
+    const params = { sort: sort.value }
     if (q.value.trim()) params.q = q.value.trim()
     if (categoryId.value) params.category_id = categoryId.value
     const { data } = await api.get('/api/products', { params })
@@ -35,11 +49,33 @@ function pickAll() {
   load()
 }
 
-function pickSection(s) {
+function applySection(s) {
   // Clicking a section filters by it (subcategories included) and unfolds it.
   expandedId.value = expandedId.value === s.id && categoryId.value === s.id ? null : s.id
   categoryId.value = s.id
   load()
+}
+
+function pickSection(s) {
+  if (isAdult(s) && localStorage.getItem(AGE_KEY) !== '1') {
+    pendingSection.value = s
+    ageModal.value = true
+    return
+  }
+  applySection(s)
+}
+
+function confirmAge() {
+  localStorage.setItem(AGE_KEY, '1')
+  ageModal.value = false
+  const s = pendingSection.value
+  pendingSection.value = null
+  if (s) applySection(s)
+}
+
+function declineAge() {
+  ageModal.value = false
+  pendingSection.value = null
 }
 
 function pickChild(c) {
@@ -66,13 +102,16 @@ onMounted(async () => {
       <button class="cat-link" :class="{ active: !categoryId }" @click="pickAll">
         Все категории
       </button>
-      <div v-for="s in catTree" :key="s.id">
+      <div v-for="s in visibleTree" :key="s.id">
         <button
           class="cat-link"
           :class="{ active: categoryId === s.id }"
           @click="pickSection(s)"
         >
-          <span>{{ s.name }}</span>
+          <span>
+            {{ s.name }}
+            <span v-if="isAdult(s)" class="age-chip">18+</span>
+          </span>
           <span v-if="s.children.length" class="cat-arrow" :class="{ open: expandedId === s.id }">
             ›
           </span>
@@ -101,6 +140,11 @@ onMounted(async () => {
           @keyup.enter="load"
         />
         <button class="btn secondary" @click="load">Найти</button>
+        <select v-model="sort" style="max-width: 190px; margin-left: auto" @change="load">
+          <option value="new">Сначала новые</option>
+          <option value="rating">По оценке</option>
+          <option value="reviews">По числу отзывов</option>
+        </select>
       </div>
 
       <p v-if="loading" class="muted">Загрузка…</p>
@@ -112,6 +156,21 @@ onMounted(async () => {
       </p>
       <div v-else class="grid">
         <ProductCard v-for="p in products" :key="p.id" :product="p" />
+      </div>
+    </div>
+  </div>
+
+  <!-- 18+ age gate -->
+  <div v-if="ageModal" class="age-overlay" @click.self="declineAge">
+    <div class="age-modal card">
+      <div class="age-badge">18+</div>
+      <h2 style="margin: 12px 0 6px">Раздел для совершеннолетних</h2>
+      <p class="muted" style="margin: 0 0 18px">
+        Здесь обсуждаются алкогольные напитки. Вам уже исполнилось 18 лет?
+      </p>
+      <div class="row" style="justify-content: center">
+        <button class="btn" @click="confirmAge">Да, мне есть 18</button>
+        <button class="btn secondary" @click="declineAge">Нет</button>
       </div>
     </div>
   </div>
@@ -177,6 +236,48 @@ onMounted(async () => {
   flex-direction: column;
   gap: 2px;
   margin-top: 2px;
+}
+
+.age-chip {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--danger);
+  border: 1px solid rgba(225, 91, 109, 0.5);
+  border-radius: 4px;
+  padding: 0 4px;
+  margin-left: 4px;
+  vertical-align: 1px;
+}
+
+.age-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.age-modal {
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  padding: 26px 22px;
+}
+.age-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid var(--danger);
+  color: var(--danger);
+  font-weight: 700;
+  font-size: 17px;
+  margin: 0 auto;
 }
 
 @media (max-width: 720px) {

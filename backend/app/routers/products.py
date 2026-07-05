@@ -107,10 +107,35 @@ def serialize_product(db: Session, product: Product) -> ProductOut:
     return out
 
 
+# Sections hidden from the general listing: alcohol is age-gated on the
+# frontend, tobacco is removed from the main page entirely. Their products
+# only show up when the section (or one of its subcategories) is filtered
+# for explicitly.
+ADULT_SECTION_NAMES = {"алкогольные напитки", "табак"}
+
+
+def _adult_category_ids(db: Session) -> set[int]:
+    sections = (
+        db.query(Category)
+        .filter(
+            func.lower(Category.name).in_(ADULT_SECTION_NAMES),
+            Category.parent_id.is_(None),
+        )
+        .all()
+    )
+    ids: set[int] = set()
+    for s in sections:
+        ids.add(s.id)
+        ids.update(c.id for c in s.children)
+    return ids
+
+
 @router.get("", response_model=list[ProductOut])
 def list_products(
     q: str | None = None,
     category_id: int | None = None,
+    sort: str = "new",  # new | rating | reviews
+    include_adult: bool = False,
     db: Session = Depends(get_db),
 ):
     query = db.query(Product).options(
@@ -128,6 +153,7 @@ def list_products(
                 Product.reviews.any(Review.tags.any(Tag.name.ilike(pat))),
             )
         )
+    adult_ids = _adult_category_ids(db)
     if category_id:
         # Filtering by a top-level section also matches its subcategories.
         child_ids = [
@@ -135,7 +161,37 @@ def list_products(
             for row in db.query(Category.id).filter(Category.parent_id == category_id)
         ]
         query = query.filter(Product.categories.any(Category.id.in_([category_id, *child_ids])))
-    products = query.order_by(Product.created_at.desc()).all()
+        # An explicit adult filter means the age gate was passed client-side.
+        if category_id in adult_ids:
+            include_adult = True
+    if adult_ids and not include_adult:
+        query = query.filter(~Product.categories.any(Category.id.in_(adult_ids)))
+
+    if sort in ("rating", "reviews"):
+        stats = (
+            db.query(
+                Review.product_id.label("product_id"),
+                func.count(Review.id).label("cnt"),
+                func.avg(Review.rating).label("avg_rating"),
+            )
+            .group_by(Review.product_id)
+            .subquery()
+        )
+        query = query.outerjoin(stats, stats.c.product_id == Product.id)
+        if sort == "rating":
+            query = query.order_by(
+                stats.c.avg_rating.desc().nulls_last(),
+                stats.c.cnt.desc().nulls_last(),
+                Product.created_at.desc(),
+            )
+        else:
+            query = query.order_by(
+                stats.c.cnt.desc().nulls_last(), Product.created_at.desc()
+            )
+    else:
+        query = query.order_by(Product.created_at.desc())
+
+    products = query.all()
     return [serialize_product(db, p) for p in products]
 
 

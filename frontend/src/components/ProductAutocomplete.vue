@@ -28,7 +28,10 @@ function onInput() {
 async function search() {
   loading.value = true
   try {
-    const { data } = await api.get('/api/products', { params: { q: query.value.trim() } })
+    // include_adult: reviews may target age-gated products too.
+    const { data } = await api.get('/api/products', {
+      params: { q: query.value.trim(), include_adult: true },
+    })
     results.value = data.slice(0, 8)
     open.value = true
   } finally {
