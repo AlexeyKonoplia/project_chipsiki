@@ -20,6 +20,7 @@ function logout() {
       </router-link>
       <div class="spacer"></div>
       <router-link to="/">Товары</router-link>
+      <router-link to="/leaderboard">Лидеры</router-link>
       <router-link to="/new-review">Оставить отзыв</router-link>
       <router-link v-if="auth.user?.is_admin" to="/admin">Админка</router-link>
       <template v-if="auth.isAuthenticated">

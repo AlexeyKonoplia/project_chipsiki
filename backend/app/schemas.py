@@ -35,6 +35,14 @@ class UserPublic(BaseModel):
     is_admin: bool
 
 
+class LeaderboardEntry(BaseModel):
+    id: int
+    username: str
+    is_admin: bool
+    review_count: int
+    average_rating: float | None = None
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"

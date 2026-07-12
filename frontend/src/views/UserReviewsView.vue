@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import api from '../api'
 import StarRating from '../components/StarRating.vue'
 
@@ -9,14 +9,42 @@ const user = ref(null)
 const reviews = ref([])
 const loading = ref(true)
 const notFound = ref(false)
+const q = ref('')
+const categoryId = ref('')
 
 function formatDate(s) {
   return new Date(s).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
+// Categories present among this user's reviewed products (for the filter).
+const categoryOptions = computed(() => {
+  const map = new Map()
+  for (const r of reviews.value) {
+    for (const c of r.product.categories || []) map.set(c.id, c.name)
+  }
+  return [...map.entries()]
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+})
+
+const filtered = computed(() => {
+  const term = q.value.trim().toLowerCase()
+  const cat = categoryId.value ? Number(categoryId.value) : null
+  return reviews.value.filter((r) => {
+    if (cat && !(r.product.categories || []).some((c) => c.id === cat)) return false
+    if (term) {
+      const hay = `${r.product.name} ${r.text || ''}`.toLowerCase()
+      if (!hay.includes(term)) return false
+    }
+    return true
+  })
+})
+
 async function load() {
   loading.value = true
   notFound.value = false
+  q.value = ''
+  categoryId.value = ''
   try {
     const [u, r] = await Promise.all([
       api.get(`/api/users/${props.id}`),
@@ -47,9 +75,26 @@ watch(() => props.id, load)
     </h1>
     <p class="muted" style="margin-top: -8px">Отзывов: {{ reviews.length }}</p>
 
+    <div v-if="reviews.length" class="toolbar" style="margin: 12px 0 16px">
+      <input
+        v-model="q"
+        placeholder="Поиск по товару или тексту…"
+        style="max-width: 280px"
+      />
+      <select v-model="categoryId" style="max-width: 240px">
+        <option value="">Все категории</option>
+        <option v-for="c in categoryOptions" :key="c.id" :value="c.id">
+          {{ c.name }}
+        </option>
+      </select>
+    </div>
+
     <p v-if="reviews.length === 0" class="muted">Пользователь ещё не оставил отзывов.</p>
+    <p v-else-if="filtered.length === 0" class="muted">
+      Под фильтр ничего не подходит.
+    </p>
     <div v-else style="display: flex; flex-direction: column; gap: 12px">
-      <div v-for="r in reviews" :key="r.id" class="card">
+      <div v-for="r in filtered" :key="r.id" class="card">
         <div class="row" style="justify-content: space-between; align-items: flex-start">
           <router-link
             :to="{ name: 'product', params: { id: r.product.id } }"

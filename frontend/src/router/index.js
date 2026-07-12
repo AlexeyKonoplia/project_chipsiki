@@ -10,6 +10,7 @@ import EditProductView from '../views/EditProductView.vue'
 import NewReviewView from '../views/NewReviewView.vue'
 import AdminView from '../views/AdminView.vue'
 import UserReviewsView from '../views/UserReviewsView.vue'
+import LeaderboardView from '../views/LeaderboardView.vue'
 
 const routes = [
   { path: '/', name: 'home', component: HomeView },
@@ -20,6 +21,7 @@ const routes = [
   { path: '/new-product', name: 'new-product', component: NewProductView, meta: { auth: true } },
   { path: '/new-review', name: 'new-review', component: NewReviewView, meta: { auth: true } },
   { path: '/admin', name: 'admin', component: AdminView, meta: { auth: true, admin: true } },
+  { path: '/leaderboard', name: 'leaderboard', component: LeaderboardView },
   { path: '/users/:id', name: 'user', component: UserReviewsView, props: true },
 ]
 
